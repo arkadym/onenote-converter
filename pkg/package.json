@@ -16,5 +16,8 @@
     "renderer.d.ts"
   ],
   "main": "renderer.js",
-  "types": "renderer.d.ts"
+  "types": "renderer.d.ts",
+  "keywords": [
+    "onenote"
+  ]
 }

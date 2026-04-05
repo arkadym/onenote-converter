@@ -1,3 +1,4 @@
+
 let imports = {};
 imports['./snippets/parser-utils-d3346c95574d03ce/node_functions.js'] = require('./snippets/parser-utils-d3346c95574d03ce/node_functions.js');
 imports['__wbindgen_placeholder__'] = module.exports;

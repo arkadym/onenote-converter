@@ -83,16 +83,10 @@ impl Renderer {
         let toc_path = self.write_html_file(&output_dir, section.display_name(), &toc_html)?;
         log!("ToC: {}", toc_path);
 
-        if errors_path.is_some() {
-            Err(ErrorKind::RenderFailed(format!(
-                "Some pages failed to render. First error: {:?}. Full error report written to {}",
-                errors.first(),
-                ERRORS_NOTE_NAME,
-            ))
-            .into())
-        } else {
-            Ok(RenderedSection { section_dir })
-        }
+        // Always return Ok — failed pages are already documented in Errors.html
+        // and included in the section ToC. Throwing here would abort the whole
+        // section conversion even though all other pages converted successfully.
+        Ok(RenderedSection { section_dir })
     }
 
     fn render_page_to_file<F>(
