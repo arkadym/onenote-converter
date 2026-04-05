@@ -17,6 +17,18 @@ if (!outputDir || !fs.existsSync(outputDir)) {
     process.exit(1);
 }
 
+// ── Parse error entries from a -Errors.html file ────────────────────────────
+function parseErrorsHtml(filePath) {
+    const html = fs.readFileSync(filePath, 'utf8');
+    const errors = [];
+    const re = /<li><strong>(.*?)<\/strong>(?:\s*—\s*<code>(.*?)<\/code>)?<\/li>/g;
+    let m;
+    while ((m = re.exec(html)) !== null) {
+        errors.push({ pageName: m[1], detail: m[2] || '' });
+    }
+    return errors;
+}
+
 // ── Find all section index HTML files ────────────────────────────────────────
 // These are top-level .html files that are NOT *-Errors.html
 const indexFiles = fs.readdirSync(outputDir)
@@ -65,9 +77,10 @@ for (const indexFile of indexFiles) {
     // Merge and deduplicate
     const missing = [...new Set([...missingFromDiff, ...failedFromLog])];
 
-    const hasErrors = fs.existsSync(path.join(outputDir, `${sectionName}-Errors.html`));
+    const errorsHtmlPath = path.join(outputDir, `${sectionName}-Errors.html`);
+    const sectionErrors = fs.existsSync(errorsHtmlPath) ? parseErrorsHtml(errorsHtmlPath) : [];
 
-    sections.push({ sectionName, total, converted, missing, hasErrors });
+    sections.push({ sectionName, total, converted, missing, sectionErrors });
     grandTotal     += total + failedFromLog.filter(p => !allPages.map(f => f.replace(/\.html$/, '')).includes(p)).length;
     grandConverted += converted;
 }
@@ -85,16 +98,18 @@ lines.push('');
 // Stats table
 lines.push('## Statistics');
 lines.push('');
-lines.push('| Section | Total | Converted | Missing |');
-lines.push('|---|---:|---:|---:|');
+lines.push('| Section | Total | Converted | Missing | Errors |');
+lines.push('|---|---:|---:|---:|---:|');
 
 for (const s of sections) {
-    const icon    = s.missing.length > 0 ? '⚠' : '✓';
+    const icon    = s.missing.length > 0 || s.sectionErrors.length > 0 ? '⚠' : '✓';
     const missing = s.missing.length > 0 ? `**${s.missing.length}**` : '0';
-    lines.push(`| ${icon} ${s.sectionName} | ${s.total} | ${s.converted} | ${missing} |`);
+    const errCount = s.sectionErrors.length > 0 ? `**${s.sectionErrors.length}**` : '0';
+    lines.push(`| ${icon} ${s.sectionName} | ${s.total} | ${s.converted} | ${missing} | ${errCount} |`);
 }
 
-lines.push(`| **Total** | **${grandTotal}** | **${grandConverted}** | **${grandMissing}** |`);
+const grandErrors = sections.reduce((sum, s) => sum + s.sectionErrors.length, 0);
+lines.push(`| **Total** | **${grandTotal}** | **${grandConverted}** | **${grandMissing}** | **${grandErrors}** |`);
 lines.push('');
 
 // Failed/missing detail
@@ -118,7 +133,23 @@ if (sectionsWithIssues.length === 0) {
     }
 }
 
+// Error details table
+const sectionsWithErrors = sections.filter(s => s.sectionErrors.length > 0);
+if (sectionsWithErrors.length > 0) {
+    lines.push('## Error Details');
+    lines.push('');
+    lines.push('| Section | Page | Error |');
+    lines.push('|---|---|---|');
+    for (const s of sectionsWithErrors) {
+        for (const e of s.sectionErrors) {
+            const detail = e.detail ? e.detail.replace(/\|/g, '\\|') : '—';
+            lines.push(`| ${s.sectionName} | ${e.pageName} | ${detail} |`);
+        }
+    }
+    lines.push('');
+}
+
 const summaryPath = path.join(outputDir, 'SUMMARY.md');
 fs.writeFileSync(summaryPath, lines.join('\n') + '\n');
 console.log(`Summary written to: ${summaryPath}`);
-console.log(`  ${grandConverted}/${grandTotal} pages converted, ${grandMissing} missing`);
+console.log(`  ${grandConverted}/${grandTotal} pages converted, ${grandMissing} missing, ${grandErrors} errors logged`);
