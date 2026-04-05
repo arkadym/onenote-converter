@@ -7,6 +7,7 @@ use crate::shared::exguid::ExGuid;
 use crate::shared::guid::Guid;
 use parser_utils::errors::{ErrorKind, Result};
 use parser_utils::log::set_current_page;
+use parser_utils::log_warn;
 
 /// A page.
 ///
@@ -207,8 +208,16 @@ pub(crate) fn parse_page(page_space: ObjectSpaceRef) -> Result<Page> {
     let contents = data
         .content
         .into_iter()
-        .map(|content_id| parse_page_content(content_id, page_space.clone()))
-        .collect::<Result<_>>()?;
+        .filter_map(|content_id| {
+            match parse_page_content(content_id, page_space.clone()) {
+                Ok(content) => Some(content),
+                Err(e) => {
+                    log_warn!("Skipping page content item due to error: {:?}", e);
+                    None
+                }
+            }
+        })
+        .collect();
 
     Ok(Page {
         entity_id: metadata.entity_guid,

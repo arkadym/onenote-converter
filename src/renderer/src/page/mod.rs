@@ -2,6 +2,7 @@ use crate::section;
 use crate::utils::StyleSet;
 use color_eyre::Result;
 use parser::page::{Page, PageContent};
+use parser_utils::log_warn;
 use std::collections::{HashMap, HashSet};
 
 pub(crate) mod content;
@@ -63,11 +64,17 @@ impl<'a> Renderer<'a> {
             content.push_str(&title_field);
         }
 
-        let page_content = page
+        let page_content: String = page
             .contents()
             .iter()
-            .map(|content| self.render_page_content(content))
-            .collect::<Result<String>>()?;
+            .map(|content| match self.render_page_content(content) {
+                Ok(html) => html,
+                Err(e) => {
+                    log_warn!("Skipping page content item due to error: {:?}", e);
+                    format!("<!-- content item skipped: {} -->", e)
+                }
+            })
+            .collect();
 
         content.push_str(&page_content);
 
