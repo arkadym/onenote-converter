@@ -1,0 +1,20 @@
+{
+  "name": "renderer",
+  "collaborators": [
+    "Pedro Luiz <pedrlz.frn@gmail.com>"
+  ],
+  "description": "Convert Microsoft OneNote® notebooks to HTML",
+  "version": "0.0.1",
+  "license": "MPL-2.0-no-copyleft-exception",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/laurent22/joplin"
+  },
+  "files": [
+    "renderer_bg.wasm",
+    "renderer.js",
+    "renderer.d.ts"
+  ],
+  "main": "renderer.js",
+  "types": "renderer.d.ts"
+}

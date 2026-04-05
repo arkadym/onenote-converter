@@ -1,0 +1,11 @@
+tmp/
+*.one
+*.onepkg
+
+# Extracted .one files and conversion output (working directories)
+extracted/
+output/
+.extracted/
+
+# Rust build artifacts (src/ is the Joplin Rust source, built pkg/ is committed)
+src/target/
