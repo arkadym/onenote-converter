@@ -5,6 +5,16 @@ using the WASM converter bundled inside the [Joplin](https://joplinapp.org/) des
 
 No Joplin account needed. No GUI. Runs entirely offline.
 
+**License: [Mozilla Public License 2.0](LICENSE)**
+
+The Rust source code in `src/` is taken from Joplin's
+[`packages/onenote-converter`](https://github.com/laurent22/joplin/tree/dev/packages/onenote-converter)
+sub-package, which is itself published under MPL-2.0 (distinct from the rest of
+Joplin which uses AGPL-3.0). Because we modify those files, MPL-2.0 propagates to
+our changes under the file-level copyleft requirement of that licence. The toolkit
+scripts (`*.js`, `*.sh`) are original work released under the same MPL-2.0 licence
+for consistency.
+
 ---
 
 ## How It Works
