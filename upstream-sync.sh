@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
-# upstream-sync.sh — Sync Joplin's onenote-converter Rust source into src/
+# upstream-sync.sh — Pull Joplin's onenote-converter Rust source into src/
+#
+# Clones the specified Joplin tag into a temp dir, copies the 4 Rust crates
+# and Cargo workspace files into src/, then stages the result for review.
 #
 # Workflow:
-#   main branch        — clean upstream Joplin source (updated by this script)
-#   onenote-converter  — our patches on top of main
+#   1. Run on main branch:  ./upstream-sync.sh [joplin-tag]
+#   2. Review diff, then:   git commit -m "chore: sync upstream Joplin vX.Y.Z"
+#   3. Update patch branch: git checkout onenote-converter && git merge main
 #
 # Usage:
-#   ./upstream-sync.sh [joplin-tag]       # e.g. ./upstream-sync.sh v3.5.13
-#   ./upstream-sync.sh                    # uses latest tag from GitHub
-#
-# After this script completes on main, switch to your patch branch and:
-#   git merge main          — merge upstream changes in
-#   git cherry-pick <sha>   — or cherry-pick individual commits
-#   git diff main..HEAD     — or use diff/patch to reapply changes
+#   ./upstream-sync.sh v3.5.13    # specific tag
+#   ./upstream-sync.sh            # latest release tag
 
 set -euo pipefail
 
@@ -33,17 +32,9 @@ fi
 
 echo "Syncing Joplin $TAG → src/"
 
-# ── 2. Ensure we are on main ────────────────────────────────────────────────
-CURRENT_BRANCH="$(git -C "$SCRIPT_DIR" rev-parse --abbrev-ref HEAD)"
-if [[ "$CURRENT_BRANCH" != "main" ]]; then
-    echo "ERROR: Must be on 'main' branch to run this script (currently on '$CURRENT_BRANCH')."
-    echo "Switch: git checkout main"
-    exit 1
-fi
-
-# ── 3. Sparse-clone Joplin into a temp dir ──────────────────────────────────
-TMPDIR="$(mktemp -d)"
-trap 'rm -rf "$TMPDIR"' EXIT
+# ── 2. Sparse-clone Joplin into a temp dir ──────────────────────────────────
+CLONE_TMP="$(mktemp -d)"
+trap 'rm -rf "$CLONE_TMP"' EXIT
 
 echo "Sparse-cloning Joplin $TAG (onenote-converter only)..."
 git clone \
@@ -53,41 +44,36 @@ git clone \
     --branch "$TAG" \
     --depth 1 \
     "$JOPLIN_REPO" \
-    "$TMPDIR/joplin" 2>&1
+    "$CLONE_TMP/joplin" 2>&1
 
-pushd "$TMPDIR/joplin" > /dev/null
+pushd "$CLONE_TMP/joplin" > /dev/null
 git sparse-checkout set "$JOPLIN_PKG"
 git checkout
 popd > /dev/null
 
-UPSTREAM_PKG="$TMPDIR/joplin/$JOPLIN_PKG"
+UPSTREAM_PKG="$CLONE_TMP/joplin/$JOPLIN_PKG"
 if [[ ! -d "$UPSTREAM_PKG" ]]; then
     echo "ERROR: $JOPLIN_PKG not found in Joplin $TAG"
     exit 1
 fi
 
-# ── 4. Copy Rust crates into src/ ───────────────────────────────────────────
+# ── 3. Copy Rust crates and Cargo workspace files into src/ ─────────────────
 echo "Copying Rust source into src/..."
 rm -rf "$SRC_DIR"
 mkdir -p "$SRC_DIR"
 
 for d in parser parser-macros parser-utils renderer; do
-    if [[ -d "$UPSTREAM_PKG/$d" ]]; then
-        cp -r "$UPSTREAM_PKG/$d" "$SRC_DIR/$d"
-    fi
+    [[ -d "$UPSTREAM_PKG/$d" ]] && cp -r "$UPSTREAM_PKG/$d" "$SRC_DIR/$d"
 done
 
-# Workspace-level Cargo files
 for f in Cargo.toml Cargo.lock; do
-    if [[ -f "$UPSTREAM_PKG/$f" ]]; then
-        cp "$UPSTREAM_PKG/$f" "$SRC_DIR/$f"
-    fi
+    [[ -f "$UPSTREAM_PKG/$f" ]] && cp "$UPSTREAM_PKG/$f" "$SRC_DIR/$f"
 done
 
-# ── 5. Record the upstream version ──────────────────────────────────────────
+# Record which upstream version src/ was taken from
 echo "$TAG" > "$SRC_DIR/.joplin-version"
 
-# ── 6. Stage and show summary ───────────────────────────────────────────────
+# ── 4. Stage and show summary ───────────────────────────────────────────────
 git -C "$SCRIPT_DIR" add src/
 
 echo ""
@@ -95,11 +81,10 @@ echo "── Upstream sync complete ──────────────�
 echo "  Joplin version : $TAG"
 echo "  Source dir     : src/"
 echo ""
-echo "Staged changes (src/):"
-git -C "$SCRIPT_DIR" diff --stat --cached | head -30
+echo "Staged changes:"
+git -C "$SCRIPT_DIR" diff --stat --cached | head -40
 
 echo ""
-echo "Review the changes above, then commit and update your patch branch:"
+echo "Next steps:"
 echo "  git commit -m \"chore: sync upstream Joplin $TAG\""
-echo "  git checkout onenote-converter"
-echo "  git merge main    # or: git rebase main"
+echo "  git checkout onenote-converter && git merge main"
