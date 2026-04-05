@@ -5,9 +5,9 @@
 # and Cargo workspace files into src/, then stages the result for review.
 #
 # Workflow:
-#   1. Run on main branch:  ./upstream-sync.sh [joplin-tag]
+#   1. Run on master branch:  ./upstream-sync.sh [joplin-tag]
 #   2. Review diff, then:   git commit -m "chore: sync upstream Joplin vX.Y.Z"
-#   3. Update patch branch: git checkout onenote-converter && git merge main
+#   3. Update patch branch: git checkout onenote-converter && git merge master
 #
 # Usage:
 #   ./upstream-sync.sh v3.5.13    # specific tag
@@ -87,4 +87,4 @@ git -C "$SCRIPT_DIR" diff --stat --cached | head -40
 echo ""
 echo "Next steps:"
 echo "  git commit -m \"chore: sync upstream Joplin $TAG\""
-echo "  git checkout onenote-converter && git merge main"
+echo "  git checkout onenote-converter && git merge master"
