@@ -7,5 +7,7 @@ extracted/
 output/
 .extracted/
 
-# Rust build artifacts
+# Rust build artifacts and local sandbox toolchain
 src/target/
+.rustup/
+.cargo/
