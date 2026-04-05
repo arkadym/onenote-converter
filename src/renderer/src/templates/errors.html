@@ -13,13 +13,13 @@
 
     <main>
         <h1>Errors</h1>
-        <p>The following errors occurred during the import process:</p>
+        <p>The following pages failed to import:</p>
         <ul>
             {% for entry in errors -%}
-                <li>{{ entry }}</li>
+                <li><strong>{{ entry.page_name }}</strong>{% if !entry.detail.is_empty() %} — <code>{{ entry.detail }}</code>{% endif %}</li>
             {% endfor %}
         </ul>
-        <p>Some pages may be missing or not imported correctly.</p>
+        <p>All other pages in this section were imported successfully.</p>
     </main>
 
 <script>

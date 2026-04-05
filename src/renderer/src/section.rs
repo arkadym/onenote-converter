@@ -1,4 +1,5 @@
-use crate::errors::{ErrorKind, Result};
+use crate::errors::Result;
+use crate::templates::errors::ErrorEntry;
 use crate::templates::section::TocEntry;
 use crate::{page, templates};
 use parser::page::Page;
@@ -41,13 +42,16 @@ impl Renderer {
 
         let mut toc = Vec::new();
         let mut fallback_title_index = 0;
-        let mut errors: Vec<String> = Vec::new();
+        let mut errors: Vec<ErrorEntry> = Vec::new();
 
         for page_series in section.page_series() {
             let page_errors = page_series.errors();
             for error in page_errors {
                 log_warn!("Page failed to parse: {:?}", error);
-                errors.push(format!("Parse error: {:?}", error));
+                errors.push(ErrorEntry {
+                    page_name: "Unknown page".into(),
+                    detail: format!("{}", error),
+                });
             }
 
             for page in page_series.pages() {
@@ -62,14 +66,20 @@ impl Renderer {
                     }
                     Err(error) => {
                         log_warn!("Error rendering page: {:?}", error);
-                        let title = page.title_text().unwrap_or_default();
-                        errors.push(format!("Render error for page {}: {:?}", title, error));
+                        let title = page
+                            .title_text()
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| "Untitled page".into());
+                        errors.push(ErrorEntry {
+                            page_name: title,
+                            detail: format!("{}", error),
+                        });
                     }
                 }
             }
         }
 
-        let errors_path = if !errors.is_empty() {
+        let _errors_path = if !errors.is_empty() {
             let error_toc_entry = self.render_errors_to_file(&errors, &output_dir)?;
             let errors_path = fs_driver().join(&output_dir, &error_toc_entry.relative_path);
             toc.push(error_toc_entry);
@@ -122,7 +132,7 @@ impl Renderer {
 
     fn render_errors_to_file(
         &mut self,
-        errors: &Vec<String>,
+        errors: &Vec<ErrorEntry>,
         output_dir: &str,
     ) -> Result<TocEntry> {
         let error_html = templates::errors::render(&errors)?;
