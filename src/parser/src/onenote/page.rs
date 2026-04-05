@@ -23,6 +23,7 @@ pub struct Page {
     author: Option<String>,
     height: Option<f32>,
     contents: Vec<PageContent>,
+    pub skipped_items: Vec<String>,
 }
 
 impl Page {
@@ -205,6 +206,7 @@ pub(crate) fn parse_page(page_space: ObjectSpaceRef) -> Result<Page> {
 
     let level = metadata.page_level;
 
+    let mut skipped_items: Vec<String> = Vec::new();
     let contents = data
         .content
         .into_iter()
@@ -213,6 +215,7 @@ pub(crate) fn parse_page(page_space: ObjectSpaceRef) -> Result<Page> {
                 Ok(content) => Some(content),
                 Err(e) => {
                     log_warn!("Skipping page content item due to error: {:?}", e);
+                    skipped_items.push(format!("{}", e));
                     None
                 }
             }
@@ -226,6 +229,7 @@ pub(crate) fn parse_page(page_space: ObjectSpaceRef) -> Result<Page> {
         author: data.author.map(|author| author.into_value()),
         height: data.page_height,
         contents,
+        skipped_items,
     })
 }
 

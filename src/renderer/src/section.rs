@@ -62,6 +62,18 @@ impl Renderer {
                     });
                 match render_result {
                     Ok(toc_entry) => {
+                        // Page rendered — but it may have had content items skipped during parse
+                        if !page.skipped_items.is_empty() {
+                            let title = page
+                                .title_text()
+                                .unwrap_or_else(|| "Untitled page".into());
+                            for detail in &page.skipped_items {
+                                errors.push(ErrorEntry {
+                                    page_name: format!("{} (partial — item skipped)", title),
+                                    detail: detail.clone(),
+                                });
+                            }
+                        }
                         toc.push(toc_entry);
                     }
                     Err(error) => {
